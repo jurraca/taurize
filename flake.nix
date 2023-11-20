@@ -2,7 +2,7 @@
   description = "Seer, a desktop Nostr Client.";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs?ref=master";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     utils.url = "github:numtide/flake-utils";
     # taurize.url = "github:jurraca/taurize";
   };
@@ -22,15 +22,15 @@
         pname = "testproject";
         src = ./.;
         mixNixDeps = import ./deps.nix {inherit lib beamPackages;};
-        version = "0.0.0";
+        version = "0.0.2";
         RELEASE_DISTRIBUTION = "none";
       };
 
       desktop = import ./taurize.nix {
         inherit pkgs system;
         stdenv = pkgs.stdenv;
-        binaryPath = testproject.out + "/bin/desktop";
-        app_name = testproject.pname;
+        binaryPath = testproject.out + "/bin/testproject";
+        app_name = testproject.pname ;
         host = "";
         port = "";
       };
