@@ -18,7 +18,8 @@ config :testproject, TestprojectWeb.Endpoint,
     layout: false
   ],
   pubsub_server: Testproject.PubSub,
-  live_view: [signing_salt: "Rz+myExT"]
+  live_view: [signing_salt: "Rz+myExT"],
+  server: true
 
 # Configures the mailer
 #

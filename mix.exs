@@ -11,7 +11,7 @@ defmodule Testproject.MixProject do
       aliases: aliases(),
       deps: deps(),
       releases: [
-        desktop: [
+        testproject: [
           cookie: "testcookie123"
         ]
       ]
