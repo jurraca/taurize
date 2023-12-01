@@ -3,7 +3,6 @@ pkgs.mkShell {
   packages = with pkgs; [
     cargo
     rustc
-    rustup
     cargo-tauri
     pkg-config
     libsoup
@@ -14,7 +13,7 @@ pkgs.mkShell {
 
     elixir
     esbuild
-    sqlite
+    sqlite # or postgresql
     inotify-tools
 
     mix2nix
