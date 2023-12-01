@@ -40,6 +40,10 @@
                   }
               }
           });
+
+          const command = Command.sidecar("${binaryPath}", ['start'])
+          const output = await command.execute()
+
       }
 
       fn check_server_started() {
@@ -62,7 +66,7 @@
   };
 
   tauri-conf-json = builtins.fromJSON (builtins.readFile ./src-tauri/tauri.conf.json);
-  bundle = tauri-conf-json.tauri.bundle // {"externalBin" = [ "desktop" ];} // {"identifier" = "dev.seer.desktop";};
+  bundle = tauri-conf-json.tauri.bundle // {"externalBin" = [ "${binaryPath}" ];} // {"identifier" = "dev.testproject.desktop";};
   allowlist =
     tauri-conf-json.tauri.allowlist
     // {
@@ -70,7 +74,7 @@
         "sidecar" = true;
         "scope" = [
           {
-            "name" = "${binaryPath}";
+            "name" = "testproject-desktop";
             "sidecar" = true;
             "args" = ["start"];
           }
@@ -86,15 +90,15 @@
     };
   conf-str = builtins.toJSON (tauri-conf-json // {"tauri" = tauri-attr; "build" = build;});
   conf-file = pkgs.writeTextFile {
-    name = "tauri-conf-json";
-    text = conf-str;
-  };
-
+      name = "tauri-conf-json";
+      text = conf-str;
+      destination = "/tauri.conf.json";
+    };
 in pkgs.rustPlatform.buildRustPackage rec {
   pname = "${app_name}";
   version = "0.1";
 
-  src = ./.;
+  src = ./src-tauri;
 
   libraries = with pkgs; [
       webkitgtk
@@ -122,35 +126,45 @@ in pkgs.rustPlatform.buildRustPackage rec {
     nativeBuildInputs = with pkgs; [ cargo-tauri cargo rustc pkg-config glib gtk3 librsvg ];
 
     doCheck = false;
+    strictDeps = false;
 
     configurePhase = ''
-        ln -s ${binaryPath} src-tauri/desktop-x86_64-unknown-linux-gnu
-        mkdir target && mkdir target/x86_64-unknown-linux-gnu && mkdir target/x86_64-unknown-linux-gnu/release-tmp
+        ln -s ${binaryPath} testproject-x86_64-unknown-linux-gnu
+        cp ${conf-file}/tauri.conf.json tauri.conf.json
 
-        cp ${main_rs} src-tauri/src/main.rs
-        cp src-tauri/build.rs src-tauri/src/build.rs
-        substituteInPlace src-tauri/Cargo.toml --replace 'name = "app"' 'name = "${app_name}"';
-        substituteInPlace src-tauri/Cargo.toml --replace 'default-run = "app"' 'default-run = "${app_name}"';
+        cp ${main_rs} src/main.rs
+        cp build.rs src/build.rs
+        ls -al
+        substituteInPlace Cargo.toml \
+          --replace 'name = "app"' 'name = "${app_name}-desktop"' \
+          --replace 'default-run = "app"' 'default-run = "${app_name}-desktop"'
 
-        echo $PWD
-        ls -al src-tauri
+        substituteInPlace Cargo.lock \
+          --replace 'name = "app"' 'name = "${app_name}-desktop"'
     '';
 
-    buildPhase = ''
-      export LD_LIBRARY_PATH=${pkgs.lib.makeLibraryPath libraries}:$LD_LIBRARY_PATH
-      chmod -R 777 target
-      echo $out
-      cargo-tauri build --config ${conf-file} -v --target x86_64-unknown-linux-gnu -b appimage
-      ls -al src-tauri
-    '';
+#    postInstall = ''
+#    mv $out/bin/app $out/bin/${app_name}-desktop
+#    '';
 
-    installPhase = ''
-      mkdir $out/bin
-      cp -r src-tauri/target/release/bundle/* $out/bin/
-    '';
+#    Build = ''
+#            #export target=$out/bin/testproject
+#            #export defaultRun='default-run' = $target
+#            substituteInPlace Cargo.toml --replace 'default-run = "app"' 'default-run = "$out"';
+#    '';
+
+#    buildPhase = ''
+#      export LD_LIBRARY_PATH=${pkgs.lib.makeLibraryPath libraries}:$LD_LIBRARY_PATH
+#
+#      export OUT_DIR="$out"
+#
+#      echo $out
+#      cargo-tauri build --config ${conf-file} -v --target x86_64-unknown-linux-gnu -b appimage -- --out-dir $out/bin -Z unstable-options
+#      ls -al src-tauri
+#    '';
 
     #buildAndTestSubdir = ./.;
 
-    cargoRoot = "./src-tauri";
+    cargoHash = "sha256-LLPz78T6D9IaCWim7y7zgTTcVQRz8XO9s+H5qDqeWko=";
     cargoLock.lockFile = ./src-tauri/Cargo.lock;
 }
