@@ -7,7 +7,7 @@
   host,
   port,
 }: let
-  devURL = "http://localhost:${port}";
+  devURL = "http://${host}:${port}";
 
   main_rs = pkgs.writeTextFile {
     name = "main.rs";
@@ -29,8 +29,9 @@
 
       fn start_server() {
           tauri::async_runtime::spawn(async move {
-              let (mut rx, mut _child) = Command::new_sidecar("desktop")
-                  .expect("failed to setup `desktop` sidecar")
+              let (mut rx, mut _child) = Command::new_sidecar("testproject")
+                  .expect("failed to setup `testproject` sidecar")
+                  .args(&["start"])
                   .spawn()
                   .expect("Failed to spawn packaged node");
 
@@ -40,10 +41,6 @@
                   }
               }
           });
-
-          const command = Command.sidecar("${binaryPath}", ['start'])
-          const output = await command.execute()
-
       }
 
       fn check_server_started() {
@@ -129,12 +126,14 @@ in pkgs.rustPlatform.buildRustPackage rec {
     strictDeps = false;
 
     configurePhase = ''
-        ln -s ${binaryPath} testproject-x86_64-unknown-linux-gnu
+        # Copy the tauri conf generated above
         cp ${conf-file}/tauri.conf.json tauri.conf.json
 
+        # Copy the updated main.rs generated above
         cp ${main_rs} src/main.rs
+        # not sure why this has to be like this
         cp build.rs src/build.rs
-        ls -al
+
         substituteInPlace Cargo.toml \
           --replace 'name = "app"' 'name = "${app_name}-desktop"' \
           --replace 'default-run = "app"' 'default-run = "${app_name}-desktop"'
@@ -142,28 +141,6 @@ in pkgs.rustPlatform.buildRustPackage rec {
         substituteInPlace Cargo.lock \
           --replace 'name = "app"' 'name = "${app_name}-desktop"'
     '';
-
-#    postInstall = ''
-#    mv $out/bin/app $out/bin/${app_name}-desktop
-#    '';
-
-#    Build = ''
-#            #export target=$out/bin/testproject
-#            #export defaultRun='default-run' = $target
-#            substituteInPlace Cargo.toml --replace 'default-run = "app"' 'default-run = "$out"';
-#    '';
-
-#    buildPhase = ''
-#      export LD_LIBRARY_PATH=${pkgs.lib.makeLibraryPath libraries}:$LD_LIBRARY_PATH
-#
-#      export OUT_DIR="$out"
-#
-#      echo $out
-#      cargo-tauri build --config ${conf-file} -v --target x86_64-unknown-linux-gnu -b appimage -- --out-dir $out/bin -Z unstable-options
-#      ls -al src-tauri
-#    '';
-
-    #buildAndTestSubdir = ./.;
 
     cargoHash = "sha256-LLPz78T6D9IaCWim7y7zgTTcVQRz8XO9s+H5qDqeWko=";
     cargoLock.lockFile = ./src-tauri/Cargo.lock;

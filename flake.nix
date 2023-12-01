@@ -23,9 +23,23 @@
         mixNixDeps = import ./deps.nix {inherit lib beamPackages;};
         version = "0.0.2";
         mixEnv = "dev";
-        RELEASE_DISTRIBUTION = "none";
+        buildInputs = [ pkgs.tailwindcss pkgs.esbuild ];
+
+        preConfigure = ''
+          substituteInPlace config/config.exs \
+            --replace "config :tailwind," "config :tailwind, path: \"${pkgs.tailwindcss}/bin/tailwindcss\","\
+            --replace "config :esbuild," "config :esbuild, path: \"${pkgs.esbuild}/bin/esbuild\", "
+
+       '';
+
+        # Deploy assets before creating release
+        preInstall = ''
+         # https://github.com/phoenixframework/phoenix/issues/2690
+          mix do deps.loadpaths --no-deps-check, assets.deploy
+        '';
 
         postInstall = ''
+          # Tauri will look for app names + their system, so we must rename the output bin accordingly
           mv $out/bin/testproject $out/bin/testproject-x86_64-unknown-linux-gnu
         '';
       };
